@@ -1,0 +1,116 @@
+/*
+ * Copyright 2017 John Grosh (jagrosh).
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+buildscript {
+    ext.kotlin_version = '1.1.3-2'
+
+    repositories.mavenCentral()
+
+    dependencies {
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+    }
+}
+
+plugins {
+    id 'com.github.johnrengelman.shadow' version '2.0.1'
+}
+
+apply plugin: 'kotlin'
+
+group = 'me.jagrosh'
+version = '0.4'
+
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
+
+sourceSets {
+    test {
+        kotlin.srcDirs += 'src/test/kotlin'
+
+        compileClasspath += main.output + main.resources
+        runtimeClasspath += main.output + main.resources
+    }
+
+    main {
+        java.srcDirs -= 'src/main/java'
+        kotlin.srcDirs -= 'src/main/java'
+        kotlin.srcDirs += 'src/main/kotlin'
+
+        // Main sources exclude compile classpath
+        compileClasspath -= main.output + main.resources
+        runtimeClasspath += main.output + main.resources
+    }
+}
+
+repositories {
+    jcenter()
+    maven { url "http://repo.maven.apache.org/maven2" }
+}
+
+dependencies {
+    // Compile Resources
+    compileOnly "org.jetbrains.kotlin:kotlin-stdlib-jre8:$kotlin_version"
+
+    // Test Compile Resources
+    testCompileOnly "org.jetbrains.kotlin:kotlin-stdlib-jre8:$kotlin_version"
+    testCompileOnly 'junit:junit:4.12'
+}
+
+compileKotlin.kotlinOptions.jvmTarget = "1.8"
+compileTestKotlin.kotlinOptions.jvmTarget = "1.8"
+
+test {
+    include('me/jagrosh/jagtag/**')
+}
+
+jar {
+    exclude('me/jagrosh/jagtag/kotlin/**')
+    manifest {
+        attributes 'Implementation-Version' : version
+    }
+}
+
+shadowJar {
+    // Include all of resources
+    include('me/jagrosh/jagtag/kotlin/**')
+
+    // Shadow java library from compilation
+    exclude('me/jagrosh/jagtag/Environment')
+    exclude('me/jagrosh/jagtag/JagTag')
+    exclude('me/jagrosh/jagtag/Method')
+    exclude('me/jagrosh/jagtag/Parse**')
+    exclude('me/jagrosh/jagtag/libraries/**')
+
+    // `JagTag-X.Y-Kotlin.jar'
+    classifier 'Kotlin'
+
+    manifest {
+        attributes 'Implementation-Version' : version,
+                'Description' : "Kotlin extensions for JagTag."
+    }
+}
+
+build {
+    dependsOn clean
+    dependsOn classes
+    dependsOn test
+    dependsOn jar
+    dependsOn shadowJar
+
+    classes.mustRunAfter clean
+    test.mustRunAfter classes
+    jar.mustRunAfter test
+    shadowJar.mustRunAfter jar
+}
